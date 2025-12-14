@@ -1,0 +1,5 @@
+pybooru
+dotenv
+asyncio
+aiohttp
+alive-progress

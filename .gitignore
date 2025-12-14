@@ -1,0 +1,14 @@
+# Ignore subfolders
+.vscode/
+__pycache__/
+Local/
+build/
+dist/
+
+# Ignore specific files
+.env
+test.py
+
+# Ignore specific file-types
+*.pyc
+*.spec

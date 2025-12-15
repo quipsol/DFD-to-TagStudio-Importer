@@ -82,7 +82,7 @@ class Database:
         ret = self.ts_cur.execute(query, query_data)
         id = ret.fetchall()
         if len(id) > 1:
-            print("Multiple files with this name found! Abandoning.")
+            print(f"Multiple files with the name {file_name} found!")
             return -1
         if len(id) == 0: 
             print(f"Couldn't find file '{file_name}' in the tag studios database")

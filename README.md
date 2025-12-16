@@ -75,4 +75,4 @@ For a smooth experience it is recommended to do the following
 
 *Example of imported tags in TagStudio*
 
-![alternative text](Local/tag_on_image_full_example.png)
+![TagStudio Screenshot](Image/tag_on_image_full_example.png)

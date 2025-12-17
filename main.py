@@ -6,7 +6,7 @@ from database import Database, PostData
 from dotenv import load_dotenv
 import asyncio
 import aiohttp
-#from alive_progress import alive_bar
+from alive_progress import alive_bar
 import time
 from enum import Enum, auto
 
@@ -33,7 +33,7 @@ if DPD_SQLITE_LOCATION is None or TS_SQLITE_LOCATION is None:
     sys_exit(0)
 
 
-
+RATE_LIMIT_INTERVAL = 1.01
 added_tags:list[tuple[int, str]] = []
 
 
@@ -46,28 +46,28 @@ async def create_parents_from_implications(session:aiohttp.ClientSession, databa
     tags_checked = 0
     implications_added = 0
     skip_tags:list[int] = []
-    for tup in added_tags:
-        start = time.time()
-        tag_implications: list[dict[str, str]] = await get_implications(session, tup[1])
-        # the x-rate-limit header does not exist anymore so we rudamentary throttle ourselves 
-        if tags_checked > 100: # Make use of burst pool
-            await asyncio.sleep(max(0, 1.0 - (time.time() - start))) # 1 request per second
-        tags_checked += 1
-        if tags_checked % 25 == 0:
-            print(f"{tags_checked} tags checked so far")
-        for tag_implication in tag_implications:
-            if tag_implication.get('status') != 'active':
-                continue
-            is_antecedent_name = True if tag_implication.get('antecedent_name') == tup[1] else False
-            other_id = database.get_tag_id(str(tag_implication.get('consequent_name') if is_antecedent_name else tag_implication.get('antecedent_name')))
-            if other_id == -1 or other_id in skip_tags:
-                continue
-            implications_added += 1
-            if is_antecedent_name:
-                database.add_parent_to_tag(tup[0], other_id)
-            else:
-                database.add_parent_to_tag(other_id, tup[0])
-        skip_tags.append(tup[0])
+    with alive_bar(len(added_tags), title="Adding Implications between Tags") as bar:
+        for tup in added_tags:
+            start = time.time()
+            tag_implications: list[dict[str, str]] = await get_implications(session, tup[1])
+            # the x-rate-limit header does not exist anymore so we rudimentary throttle ourselves 
+            if tags_checked > 500: # Make use of burst pool
+                await asyncio.sleep(max(0, RATE_LIMIT_INTERVAL - (time.time() - start)))
+            tags_checked += 1
+            for tag_implication in tag_implications:
+                if tag_implication.get('status') != 'active':
+                    continue
+                is_antecedent_name = True if tag_implication.get('antecedent_name') == tup[1] else False
+                other_id = database.get_tag_id(str(tag_implication.get('consequent_name') if is_antecedent_name else tag_implication.get('antecedent_name')))
+                if other_id == -1 or other_id in skip_tags:
+                    continue
+                implications_added += 1
+                if is_antecedent_name:
+                    database.add_parent_to_tag(tup[0], other_id)
+                else:
+                    database.add_parent_to_tag(other_id, tup[0])
+            skip_tags.append(tup[0])
+            bar()
     return (tags_checked, implications_added)
 
 

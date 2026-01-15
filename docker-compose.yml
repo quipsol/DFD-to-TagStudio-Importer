@@ -1,5 +1,5 @@
 services:
-  db-to-ts:
+  dfd-to-ts:
     build: .
     env_file:
       - .env.docker

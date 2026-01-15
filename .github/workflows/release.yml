@@ -1,0 +1,152 @@
+name: Build and Release Executables
+
+permissions:
+  contents: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g. v1.0.0)"
+        required: true
+      dry_run:
+        type: boolean
+        description: "Skip final release creation part"
+        required: true
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build executables
+        run: |
+          pyinstaller --onefile main.py --name DFD-to-TagStudio
+
+
+      - name: Package Windows ZIP
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path package
+
+          Move-Item dist\DFD-to-TagStudio.exe package\
+
+          @"
+          DFD_DATABASE_LOCATION=<path_to_dfd_database>/post-downloads.db
+          TAG_STUDIO_DATABASE_LOCATION=<path_to_tag_studio_library>/.TagStudio/ts_library.sqlite
+
+          IMPORT_IMPLICATIONS=True
+          SLOW_MODE=False
+          UGOIRA_IS_WEBP=True
+
+          ARTIST_COLOR=tagstudio-standard,red-orange
+          COPYRIGHT_COLOR=tagstudio-standard,indigo
+          CHARACTER_COLOR=tagstudio-standard,green
+          GENERAL_COLOR=tagstudio-standard,blue
+          META_COLOR=tagstudio-standard,yellow
+          "@ | Out-File -Encoding ascii package\.env
+
+          Copy-Item README.md package\
+
+          Compress-Archive -Path package\* -DestinationPath DFD-to-TagStudio-windows.zip -Force
+
+
+      - name: Package Linux ZIP
+        if: runner.os == 'Linux'
+        run: |
+          mkdir package
+          mv dist/DFD-to-TagStudio package/
+
+          cat <<EOF > package/.env
+          DFD_DATABASE_LOCATION=<path_to_dfd_database>/post-downloads.db
+          TAG_STUDIO_DATABASE_LOCATION=<path_to_tag_studio_library>/.TagStudio/ts_library.sqlite
+
+          IMPORT_IMPLICATIONS=True
+          SLOW_MODE=False
+          UGOIRA_IS_WEBP=True
+
+          ARTIST_COLOR=tagstudio-standard,red-orange
+          COPYRIGHT_COLOR=tagstudio-standard,indigo
+          CHARACTER_COLOR=tagstudio-standard,green
+          GENERAL_COLOR=tagstudio-standard,blue
+          META_COLOR=tagstudio-standard,yellow
+          EOF
+
+          cp README.md package/
+          chmod +x package/*
+          zip -r DFD-to-TagStudio-linux.zip package
+
+      - name: Package macOS ZIP
+        if: runner.os == 'macOS'
+        run: |
+          mkdir package
+          mv dist/DFD-to-TagStudio package/
+
+          cat <<EOF > package/.env
+          DFD_DATABASE_LOCATION=<path_to_dfd_database>/post-downloads.db
+          TAG_STUDIO_DATABASE_LOCATION=<path_to_tag_studio_library>/.TagStudio/ts_library.sqlite
+
+          IMPORT_IMPLICATIONS=True
+          SLOW_MODE=False
+          UGOIRA_IS_WEBP=True
+
+          ARTIST_COLOR=tagstudio-standard,red-orange
+          COPYRIGHT_COLOR=tagstudio-standard,indigo
+          CHARACTER_COLOR=tagstudio-standard,green
+          GENERAL_COLOR=tagstudio-standard,blue
+          META_COLOR=tagstudio-standard,yellow
+          EOF
+
+          cp README.md package/
+          chmod +x package/*
+          zip -r DFD-to-TagStudio-macos.zip package
+
+      - name: Upload ZIP artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: DFD-to-TagStudio-${{ runner.os }}
+          path: DFD-to-TagStudio-*.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: |
+          sha256sum DFD-to-TagStudio-*.zip > checksums.txt
+
+      - name: Create GitHub Release
+        if: ${{ github.event.inputs.dry_run == 'false' && github.event.inputs.version != '' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.version }}
+          name: DFD to TagStudio tag importer ${{ github.event.inputs.version }}
+          files: |
+            DFD-to-TagStudio-*.zip
+            checksums.txt

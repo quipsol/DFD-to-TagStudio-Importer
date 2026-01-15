@@ -12,3 +12,4 @@ test.py
 # Ignore specific file-types
 *.pyc
 *.spec
+*.txt

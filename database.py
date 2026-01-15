@@ -16,19 +16,11 @@ class PostData:
 
 class Database:
     def __init__(self, path_to_did_db, path_to_ts_db):
-        self.did_con = sqlite3.connect(path_to_did_db)
-        self.did_cur = self.did_con.cursor()
+        self.dfd_con = sqlite3.connect(path_to_did_db)
+        self.dfd_cur = self.dfd_con.cursor()
         self.ts_con = sqlite3.connect(path_to_ts_db)
         self.ts_cur = self.ts_con.cursor()
         self._prepare_ts_db()
-
-#ARTIST_COLOR=tagstudio-standard,red-orange
-# Neon Red-Orange (TagStudio Neon)
-# Neon Indigo (TagStudio Neon)
-# Neon Green (TagSt5udio Neon)
-# Neon Blue (TagStudio Neon)
-# Neon Yellow (TagStudio Neon)
-
 
     def _prepare_ts_db(self) -> None:
         sql_add_category_tags_queries = [ 
@@ -63,6 +55,8 @@ class Database:
         self.ts_con.commit()
         
 
+# TS DATABASE ACCESS
+
     def get_categories(self) -> dict[str, int]:
         query = """SELECT name, id
                         FROM tags
@@ -70,8 +64,6 @@ class Database:
         ret = self.ts_cur.execute(query)
         ret_fetch = ret.fetchall()
         return dict(ret_fetch)
-
-
 
     def get_file_id(self, file_name: str) -> int:
         query_data = (file_name,)
@@ -126,6 +118,24 @@ class Database:
                         (name, color_namespace, color_slug, is_category)
                         VALUES(?,?,?,?)"""
         self.ts_cur.execute(query, query_data)
+       
+
+    def does_parent_exist(self, tag_id:int, parent_id:int) -> bool:
+        query_data = (parent_id, tag_id)
+        query = """SELECT 1 FROM tag_parents WHERE parent_id = ? AND child_id = ?"""
+        ret = self.ts_cur.execute(query, query_data)
+        return ret.fetchone() is not None
+
+    def add_parent_to_tag(self, tag_id:int, parent_id:int) -> bool:
+        query_data = (parent_id, tag_id)
+        query = """INSERT OR IGNORE INTO tag_parents
+                        (parent_id, child_id)
+                        VALUES(?,?)"""
+        self.ts_cur.execute(query, query_data)
+        return self.ts_cur.rowcount == 1
+
+
+# DFD DATABASE ACCESS        
 
     def get_table_chunk(self, last_id : int, chunk_size : int) -> List[PostData]:
         query_data = (last_id, chunk_size)
@@ -134,12 +144,14 @@ class Database:
                         WHERE post_id > ?
                         ORDER BY post_id ASC
                         LIMIT ?"""
-                        #VALUES(?,?)"""
-        ret = self.did_cur.execute(query, query_data)
+        ret = self.dfd_cur.execute(query, query_data)
         rows = ret.fetchall()
         retVal = []
         for row in rows:
             r_post_id, r_general, r_character, r_copyright, r_meta, r_artist, r_rating, r_file_ext = row
+            # TODO how to handle ugoira conversion yes/no
+            if str.lower(r_file_ext) == 'zip':
+                r_file_ext = 'webp'
             pd = PostData(
                 post_id=r_post_id,
                 file_name = f"Danbooru_{str(r_post_id)}.{r_file_ext}",
@@ -152,22 +164,15 @@ class Database:
             )
             retVal.append(pd)
         return retVal
-            
+     
 
-    def add_parent_to_tag(self, tag_id:int, parent_id:int) -> None:
-        query_data = (parent_id, tag_id)
-        query = """INSERT INTO tag_parents
-                        (parent_id, child_id)
-                        VALUES(?,?)"""
-        self.ts_cur.execute(query, query_data)
-        
 
     def commit(self):
-        self.did_con.commit()
+        self.dfd_con.commit()
         self.ts_con.commit()
 
     def close(self):
-        self.did_con.close()
+        self.dfd_con.close()
         self.ts_con.close()
     
     def __enter__(self):

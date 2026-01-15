@@ -1,0 +1,13 @@
+services:
+  db-to-ts:
+    build: .
+    env_file:
+      - .env.docker
+    environment:
+      DFD_DATABASE_LOCATION: /data/dfd/post-downloads.db
+      TAG_STUDIO_DATABASE_LOCATION: /data/tagstudio/ts_library.sqlite
+      TAG_PERSISTENCY_DIR: /tag-persistency
+    volumes:
+      - "${DFD_DATABASE_LOCATION}:/data/dfd/post-downloads.db"
+      - "${TAG_STUDIO_DATABASE_LOCATION}:/data/tagstudio/ts_library.sqlite"
+      - ./tag-persistency:/tag-persistency

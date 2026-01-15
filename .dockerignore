@@ -4,13 +4,14 @@ __pycache__/
 Local/
 build/
 dist/
-tag-persistency/
 
 # Ignore specific files
 .env
-.env.docker
 test.py
+.gitignore
+temporary_tag_buffer.txt
 
 # Ignore specific file-types
 *.pyc
 *.spec
+*.db

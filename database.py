@@ -137,7 +137,7 @@ class Database:
 
 # DFD DATABASE ACCESS        
 
-    def get_table_chunk(self, last_id : int, chunk_size : int) -> List[PostData]:
+    def get_table_chunk(self, last_id : int, chunk_size : int, is_webp:bool) -> List[PostData]:
         query_data = (last_id, chunk_size)
         query = """SELECT post_id, tag_string_general, tag_string_character, tag_string_copyright, tag_string_meta, tag_string_artist, rating, file_ext
                         FROM posts
@@ -149,9 +149,9 @@ class Database:
         retVal = []
         for row in rows:
             r_post_id, r_general, r_character, r_copyright, r_meta, r_artist, r_rating, r_file_ext = row
-            # TODO how to handle ugoira conversion yes/no
             if str.lower(r_file_ext) == 'zip':
-                r_file_ext = 'webp'
+                if is_webp:
+                    r_file_ext = 'webp'
             pd = PostData(
                 post_id=r_post_id,
                 file_name = f"Danbooru_{str(r_post_id)}.{r_file_ext}",

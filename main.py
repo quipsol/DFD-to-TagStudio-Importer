@@ -35,8 +35,6 @@ if DPD_SQLITE_LOCATION is None or TS_SQLITE_LOCATION is None:
 
 TAG_BUFFER_FILENAME = 'temporary_tag_buffer.txt'
 CONCURRENCY = 1 if SLOW_MODE else 3 # More than 3 increases chance of running into "too many requests" denial repeatedly
-print (CONCURRENCY)
-sys_exit(0)
 
 
 async def worker(session:aiohttp.ClientSession, database:Database,
@@ -186,7 +184,7 @@ async def a_main():
                 last_id = post_datas[len(post_datas)-1].post_id
                 post_datas: List[PostData] = database.get_table_chunk(last_id, chunk_size)
     
-            if data_exists and IMPORT_IMPLICATIONS:
+            if IMPORT_IMPLICATIONS:
                 print("Finished adding tags to files. Now adding implications between tags.")
                 print("This process will take some time. You can already use TagStudio to view your files, but please refrain from:")
                 print(" - adding/removing tags on files")

@@ -126,6 +126,7 @@ _COLOR variables have default values set to closely match the respective colors 
 The color "TagStudio Grayscale -> Dark Gray" would be written as `tagstudio-grayscale,dark-gray`.
 
 <br>
+
 If this tool is in the same folder as the DFD tool, you can merge the two `.env` files into one.
 
 ---
